@@ -32,6 +32,13 @@ La documentación oficial de Logseq (`docs/develop-logseq-on-windows.md`) exige 
 	5. **Instalador sin firmar**: el `.exe` generado (Squirrel) no estará firmado digitalmente. Windows SmartScreen puede avisar la primera vez que se ejecute. No es un error, es esperado.
 	6. **Estado del repo**: verificado — `logseq/og` está activo y mantenido (rama `version/file`, +12.800 commits, actividad reciente), no es un fork abandonado.
 	7. **IDE**: se usará IntelliJ IDEA con el plugin **Cursive** (para ClojureScript) y el plugin oficial de **Claude Code** para JetBrains. El plugin de Claude Code no trae el CLI incluido: hay que instalar `claude` por separado y que esté en el `PATH` de la VM.
+	8. **Herramientas de compilación C/C++ obligatorias**: `static/` incluye módulos nativos (p. ej. `electron-deeplink`) que se compilan al instalar. Sin `build-essential` (`make`, `gcc`, `g++`) la instalación de `static/` falla con `gyp ERR! not found: make`. Instalar con `sudo apt install build-essential`.
+	9. **Error de `canvas` al instalar la raíz: inofensivo**: `canvas` es una dependencia opcional de `pdfjs-dist` (solo para renderizar PDFs desde Node, sin navegador). Falla porque no hay binario precompilado para Node 22 y faltan librerías de sistema (cairo…). Dentro de Electron no se usa; el propio yarn indica *"This module is OPTIONAL, you can safely ignore this error"*.
+	10. **Sandbox de Electron y AppArmor (Ubuntu 24.04+)**: Ubuntu bloquea los *user namespaces* sin privilegios (`kernel.apparmor_restrict_unprivileged_userns = 1`), que Chromium necesita para su sandbox. Síntoma: `FATAL: The SUID sandbox helper binary was found, but is not configured correctly`. Solución: instalar el perfil `apparmor/logseq-og-dev` de esta carpeta (mismo enfoque que Ubuntu usa para VS Code/Chrome; no restringe la app, solo le permite crear namespaces) y sobrevive a reinstalaciones de `static/node_modules`:
+		- `sudo cp apparmor/logseq-og-dev /etc/apparmor.d/ && sudo apparmor_parser -r /etc/apparmor.d/logseq-og-dev`
+		- El perfil contiene la ruta absoluta del Electron de desarrollo (`~/Documents/logseqogoif/static/node_modules/electron/dist/electron`); si el repo se clona en otra ruta, hay que ajustarla.
+		- Alternativa temporal: `chown root:root` + `chmod 4755` en `static/node_modules/electron/dist/chrome-sandbox` (se pierde al reinstalar `static/`). No usar `--no-sandbox`.
+	11. **Node 22 como versión por defecto de nvm**: `nvm alias default 22`, para no depender de ejecutar `nvm use` en cada terminal. `yarn` (vía corepack) solo existe en la instalación de Node 22. Las terminales abiertas antes de cambiar el default siguen con la versión anterior: hay que abrir una nueva.
 
 ---
   
@@ -47,6 +54,7 @@ La documentación oficial de Logseq (`docs/develop-logseq-on-windows.md`) exige 
 
 			- Node.js (versión exacta según `build.yml` del repo, gestionada con `nvm`).
 			- Yarn 1 (classic), vía `corepack enable`.
+			- `build-essential` (`make`, `gcc`, `g++`) para compilar los módulos nativos (ver aviso 8).
 			- Java (OpenJDK, versión que requiera el proyecto) + Clojure CLI.
 			- Opcional: Babashka, si se quiere usar `bb dev:electron-start`.
 			- IntelliJ IDEA + plugin Cursive + plugin de Claude Code (JetBrains Marketplace).
@@ -58,13 +66,15 @@ La documentación oficial de Logseq (`docs/develop-logseq-on-windows.md`) exige 
   
 				4. **Instalar dependencias**
 
-			- `yarn install` en la raíz.
-			- `yarn install` dentro de `static/`.
+			- `yarn install --frozen-lockfile` en la raíz. El error de `canvas` es esperado (ver aviso 9).
+			- `static/` **no se puede instalar todavía**: su `package.json` lo copia `yarn watch` desde `resources/`. Se instala en el paso 5 (ver abajo).
   
 				5. **Levantar el ciclo de desarrollo en caliente**
 
 			- `yarn watch` y esperar a que compile `:electron` y `:app`.
-			- `yarn dev-electron-app` para abrir la app en una ventana Electron dentro de la VM.
+			- `yarn dev-electron-app` para abrir la app en una ventana Electron dentro de la VM. Si `static/node_modules` no existe, lo instala automáticamente.
+			- Si esa instalación de `static/` falla a medias, `dev-electron-app` **no la reintenta** (solo comprueba que exista la carpeta): corregir la causa y ejecutar a mano `yarn install --frozen-lockfile` dentro de `static/`.
+			- Requiere el perfil de AppArmor (ver aviso 10).
   
 				6. **Hacer el cambio de prueba ("Hello World")**
 
