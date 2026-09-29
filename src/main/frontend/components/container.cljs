@@ -415,6 +415,9 @@
         {:aria-label "Navigation menu"}
         (repo/repos-dropdown)
 
+        ;; TEMP: dev-cycle smoke test, to be discarded
+        [:div.px-2.py-1.font-bold "Hello World"]
+
         [:div.nav-header.flex.flex-col.mt-2
          (let [page (:page default-home)]
            (if (and page (not (state/enable-journals? (state/get-current-repo))))
