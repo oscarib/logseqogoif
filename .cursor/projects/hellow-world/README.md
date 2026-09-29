@@ -19,7 +19,7 @@ La documentación oficial de Logseq (`docs/develop-logseq-on-windows.md`) exige 
   
 	1. Todo el desarrollo, la compilación ClojureScript y la validación en caliente (hot-reload) se hacen en la VM Linux.
 	2. El código ya compilado se traslada a Windows (por Git, lo más limpio; o copiando el resultado vía carpeta compartida de VirtualBox si se prefiere).
-	3. El empaquetado final (`pnpm release-electron` o equivalente) se ejecuta en Windows nativo, con Visual Studio instalado, donde cualquier módulo nativo se compila sin fricción.
+	3. El empaquetado final (`yarn release-electron` o equivalente) se ejecuta en Windows nativo, con Visual Studio instalado, donde cualquier módulo nativo se compila sin fricción.
 
 ---
   
@@ -27,8 +27,8 @@ La documentación oficial de Logseq (`docs/develop-logseq-on-windows.md`) exige 
   
 	1. **Carpetas compartidas de VirtualBox e inotify**: si en algún momento se edita o compila directamente sobre una carpeta compartida (`vboxsf`), el watcher de hot-reload (shadow-cljs/webpack) puede no detectar los cambios, porque esas carpetas no propagan eventos inotify de forma fiable. Usarlas solo para mover el resultado ya compilado entre entornos, nunca como directorio de trabajo activo.
 	2. **Renderizado GPU de Electron dentro de la VM**: Chromium (motor de Electron) puede fallar al iniciar el sandbox de GPU en un entorno virtualizado (pantalla negra o crash al lanzar la app de desarrollo). Si ocurre, lanzar con el flag `--disable-gpu`. Activar "Enable 3D Acceleration" en la configuración de pantalla de la VM ayuda a mitigarlo.
-	3. **Gestor de paquetes**: el repo usa **pnpm**, no yarn. Cualquier guía o instrucción antigua que use yarn puede dar problemas de lockfile.
-	4. **Versiones exactas del toolchain**: Node, Java, Clojure, Leiningen y Babashka tienen versiones concretas esperadas por el proyecto (revisar `.github/workflows/build.yml` del repo antes de instalar nada). Instalar versiones libres de los repositorios de Ubuntu puede dar fallos sutiles de compilación. Usar `nvm` para fijar la versión exacta de Node.
+	3. **Gestor de paquetes**: la rama `version/file` usa **Yarn 1 (classic)**, no pnpm: tiene `yarn.lock` y `static/yarn.lock`, el workflow de build cachea `yarn` y `docs/develop-logseq.md` usa `yarn`. Usar pnpm ignoraría los lockfiles y resolvería otras versiones de dependencias. Yarn 1 se activa con `corepack enable` (incluido en Node 22).
+	4. **Versiones exactas del toolchain**: Node, Java, Clojure, Leiningen y Babashka tienen versiones concretas esperadas por el proyecto (revisar `.github/workflows/build.yml` del repo antes de instalar nada). Verificadas en `build.yml`: **Node 22**, **Java 11 (Zulu)**, **Clojure CLI 1.11.1.1413**, **Babashka 1.0.168**. Node 22 está fijado en el repo con `.nvmrc` (ejecutar `nvm use` en la raíz). Instalar versiones libres de los repositorios de Ubuntu puede dar fallos sutiles de compilación. Usar `nvm` para fijar la versión exacta de Node.
 	5. **Instalador sin firmar**: el `.exe` generado (Squirrel) no estará firmado digitalmente. Windows SmartScreen puede avisar la primera vez que se ejecute. No es un error, es esperado.
 	6. **Estado del repo**: verificado — `logseq/og` está activo y mantenido (rama `version/file`, +12.800 commits, actividad reciente), no es un fork abandonado.
 	7. **IDE**: se usará IntelliJ IDEA con el plugin **Cursive** (para ClojureScript) y el plugin oficial de **Claude Code** para JetBrains. El plugin de Claude Code no trae el CLI incluido: hay que instalar `claude` por separado y que esté en el `PATH` de la VM.
@@ -46,7 +46,7 @@ La documentación oficial de Logseq (`docs/develop-logseq-on-windows.md`) exige 
 				2. **Instalar el toolchain de desarrollo**
 
 			- Node.js (versión exacta según `build.yml` del repo, gestionada con `nvm`).
-			- pnpm.
+			- Yarn 1 (classic), vía `corepack enable`.
 			- Java (OpenJDK, versión que requiera el proyecto) + Clojure CLI.
 			- Opcional: Babashka, si se quiere usar `bb dev:electron-start`.
 			- IntelliJ IDEA + plugin Cursive + plugin de Claude Code (JetBrains Marketplace).
@@ -58,13 +58,13 @@ La documentación oficial de Logseq (`docs/develop-logseq-on-windows.md`) exige 
   
 				4. **Instalar dependencias**
 
-			- `pnpm install` en la raíz.
-			- `pnpm install` dentro de `static/`.
+			- `yarn install` en la raíz.
+			- `yarn install` dentro de `static/`.
   
 				5. **Levantar el ciclo de desarrollo en caliente**
 
-			- `pnpm watch` y esperar a que compile `:electron` y `:app`.
-			- `pnpm dev-electron-app` para abrir la app en una ventana Electron dentro de la VM.
+			- `yarn watch` y esperar a que compile `:electron` y `:app`.
+			- `yarn dev-electron-app` para abrir la app en una ventana Electron dentro de la VM.
   
 				6. **Hacer el cambio de prueba ("Hello World")**
 
@@ -74,8 +74,8 @@ La documentación oficial de Logseq (`docs/develop-logseq-on-windows.md`) exige 
 				7. **Preparar el traslado a Windows para el empaquetado final**
 
 			- Hacer commit del cambio en Git.
-			- En Windows: clonar/pull el repo, instalar el stack equivalente (Node, pnpm, Java, Clojure, Visual Studio 2022 Community — ver `docs/develop-logseq-on-windows.md`).
-			- Ejecutar el build de producción (`pnpm release-electron` o el comando equivalente) en Windows nativo.
+			- En Windows: clonar/pull el repo, instalar el stack equivalente (Node, Yarn, Java, Clojure, Visual Studio 2022 Community — ver `docs/develop-logseq-on-windows.md`).
+			- Ejecutar el build de producción (`yarn release-electron` o el comando equivalente) en Windows nativo.
 			- Verificar que el instalador generado funciona y muestra el cambio de prueba.
   
 				8. **Revertir el cambio de prueba**
